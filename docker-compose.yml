@@ -23,6 +23,7 @@ services:
     expose:
       # Reachable only inside the compose network — no host port publish.
       - "8080"
+    networks: [default]
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
       interval: 30s
@@ -46,7 +47,15 @@ services:
       TLS_EMAIL: ${TLS_EMAIL}
     depends_on:
       - app
+    # `default` reaches the demo `app`; `vayunx-net` (shared, external) lets this one Caddy
+    # also reach the pqc-chat-app `web` container so a single proxy serves BOTH domains
+    # (sampledemo.vayunx.com + chat.vayunx.com). Create it once: `docker network create vayunx-net`.
+    networks: [default, vayunx-net]
 
 volumes:
   caddy_data:
   caddy_config:
+
+networks:
+  vayunx-net:
+    external: true

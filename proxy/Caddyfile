@@ -44,3 +44,19 @@
 	# Proxy everything to the internal app container on port 8080.
 	reverse_proxy app:8080
 }
+
+# ── Second demo: the PQC chat app (github.com/vayunxtechnologies/pqc-chat-app) ────────────────
+# Served by this SAME Caddy on the shared `vayunx-net` network. Its `web` container (nginx serving
+# the SPA + proxying /api and /ws to its backend) must be up on vayunx-net. WebSockets pass through
+# reverse_proxy automatically. DNS: point chat.vayunx.com at this server's IP.
+chat.vayunx.com {
+	tls {$TLS_EMAIL}
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	reverse_proxy web:80
+}
