@@ -1,0 +1,24 @@
+/*
+ * Password storage for the demo login service.
+ *
+ * NOTE (VayunX demo): passwords are stored as UNSALTED SHA-1 digests — a weak, broken hash
+ * (practical collisions since 2017; GPU brute-force trivial). The VayunX scanner flags this
+ * and the deterministic auto-patcher performs a MECHANICAL swap SHA-1 -> SHA-256 (a genuine
+ * drop-in code fix). This is the "classical algorithm used to store passwords" the demo shows
+ * turning from red to green.
+ */
+
+import { createHash } from 'crypto';
+
+/** The hash currently protecting stored passwords — surfaced in the posture panel. */
+export const PASSWORD_HASH_ALGORITHM = 'SHA-1';
+
+/** Hash a password for storage. WEAK: unsalted SHA-1 — auto-patched to SHA-256. */
+export function hashPassword(password: string): string {
+  return createHash('sha1').update(password).digest('hex');
+}
+
+/** Constant-ish comparison of a candidate password against a stored hash. */
+export function verifyPassword(password: string, storedHash: string): boolean {
+  return hashPassword(password) === storedHash;
+}

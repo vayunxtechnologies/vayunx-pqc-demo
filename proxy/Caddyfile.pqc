@@ -1,0 +1,53 @@
+# =============================================================================
+# VayunX PQC demo — PQC TLS profile  (the "after" host-scan state)
+# =============================================================================
+# This is the profile a host TLS scan should classify as PQC-READY: the
+# key-exchange offers the HYBRID post-quantum group X25519MLKEM768 (classical
+# X25519 combined with the NIST-standardized ML-KEM-768 / FIPS 203 KEM),
+# alongside classical curves for backwards compatibility.
+#
+# Swapping THIS file in for proxy/Caddyfile and redeploying is exactly what
+# flips the host TLS scan from "classical" to "PQC-ready" — nothing in the app
+# changes, only the negotiated key-exchange group on the wire.
+#   make pqc        (Linux/macOS)
+#   or manually: copy Caddyfile.pqc -> Caddyfile, then docker compose up -d --build
+#
+# ---------------------------------------------------------------------------
+# VERSION REQUIREMENT (important):
+#   The `x25519mlkem768` curve token requires Caddy >= 2.9 built with Go >= 1.24,
+#   which ships the standard-library X25519MLKEM768 hybrid key exchange. The
+#   `caddy:2-alpine` image referenced by docker-compose.yml must be recent enough
+#   (2.9+). If you pin an older Caddy, either bump the image tag or use a build
+#   with the Cloudflare/OQS PQC plugin. If the token is rejected on your build,
+#   fall back to the OQS-enabled Caddy build (xcaddy with the pq plugin) — the
+#   older token spelling was `X25519Kyber768Draft00` on Kyber-draft builds.
+# =============================================================================
+
+{
+	# ACME account email for Let's Encrypt certificate issuance.
+	email {$TLS_EMAIL}
+}
+
+{$DOMAIN} {
+	# --- Hybrid post-quantum key exchange ------------------------------------
+	# Offer the hybrid PQC group FIRST, then classical curves as fallback so
+	# non-PQC clients still connect. A host TLS scan that inspects the offered
+	# supported_groups will now see x25519mlkem768 and classify the endpoint as
+	# PQC-ready / quantum-resistant key establishment.
+	tls {
+		curves x25519mlkem768 x25519 secp256r1 secp384r1
+	}
+
+	# Security headers (applied to every response).
+	header {
+		# HSTS — force HTTPS for a year, include subdomains.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Prevent MIME-type sniffing.
+		X-Content-Type-Options "nosniff"
+		# Don't leak the proxy/server implementation.
+		-Server
+	}
+
+	# Proxy everything to the internal app container on port 8080.
+	reverse_proxy app:8080
+}

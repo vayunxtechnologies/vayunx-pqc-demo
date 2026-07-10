@@ -1,0 +1,46 @@
+# =============================================================================
+# VayunX PQC demo — CLASSICAL TLS profile  (the "before" host-scan state)
+# =============================================================================
+# This is the profile a host TLS scan should classify as PRE-quantum / classical:
+# the key-exchange is pinned to classical elliptic curves ONLY, with no hybrid
+# post-quantum group offered in the ClientHello/ServerHello.
+#
+# To flip the host TLS scan to PQC-ready, swap in proxy/Caddyfile.pqc and
+# redeploy (see the Makefile `pqc` target). Nothing about the app changes — only
+# the negotiated key-exchange group on the wire.
+# =============================================================================
+
+{
+	# ACME account email for Let's Encrypt certificate issuance.
+	email {$TLS_EMAIL}
+}
+
+{$DOMAIN} {
+	# --- Classical key exchange only -----------------------------------------
+	# Pin the TLS key-exchange (ECDHE) groups to classical curves. NO
+	# post-quantum / hybrid group (e.g. x25519mlkem768) is offered here, so a
+	# host TLS scan sees a purely classical, quantum-vulnerable handshake.
+	#
+	# NOTE: the `curves` directive lives inside the `tls` block. If your Caddy
+	# build rejects these exact tokens (older/newer builds occasionally rename
+	# them), remove the whole `tls { curves ... }` block below — Caddy then
+	# falls back to its secure defaults, which are still classical (no PQC)
+	# unless x25519mlkem768 is explicitly enabled. The demo's classical posture
+	# is preserved either way.
+	tls {
+		curves x25519 secp256r1 secp384r1
+	}
+
+	# Security headers (applied to every response).
+	header {
+		# HSTS — force HTTPS for a year, include subdomains.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Prevent MIME-type sniffing.
+		X-Content-Type-Options "nosniff"
+		# Don't leak the proxy/server implementation.
+		-Server
+	}
+
+	# Proxy everything to the internal app container on port 8080.
+	reverse_proxy app:8080
+}

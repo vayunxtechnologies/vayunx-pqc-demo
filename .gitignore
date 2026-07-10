@@ -1,0 +1,15 @@
+# Local environment / secrets
+.env
+
+# Node
+node_modules
+dist
+
+# Caddy runtime state (certs, ACME account, config cache)
+caddy_data
+
+# Logs
+**/*.log
+
+# OS cruft
+.DS_Store
