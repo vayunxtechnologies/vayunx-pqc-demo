@@ -15,7 +15,7 @@ export const PASSWORD_HASH_ALGORITHM = 'SHA-1';
 
 /** Hash a password for storage. WEAK: unsalted SHA-1 — auto-patched to SHA-256. */
 export function hashPassword(password: string): string {
-  return createHash('sha3256').update(password).digest('hex');
+  return createHash('sha1').update(password).digest('hex');
 }
 
 /** Constant-ish comparison of a candidate password against a stored hash. */
