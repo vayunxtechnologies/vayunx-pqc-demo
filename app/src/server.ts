@@ -72,7 +72,7 @@ app.get('/dashboard', (req: Request, res: Response) => {
     res.redirect('/login');
     return;
   }
-  res.type('html').send(dashboardPage(user, getPosture()));
+  res.type('html').send(dashboardPage(user));
 });
 
 app.post('/logout', (_req: Request, res: Response) => {
