@@ -49,7 +49,7 @@ function createClassicalSigner(): Signer {
       return verifyMessage(keys.publicKeyObject, msg, sig);
     },
     publicKeyPem_or_hex(): string {
-      return keys.publicKeyObject.export({ type: 'spki', format: 'pem' }) as string;
+      return Buffer.from(keys.publicKeyObject).toString('hex');
     },
   };
 }
