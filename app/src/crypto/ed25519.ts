@@ -8,13 +8,18 @@
  * (FIPS 204). The keygen below is the pattern the AST codemod rewrites.
  */
 
+import {
+  generateKeyPairSync,
+  sign as nodeSign,
+  verify as nodeVerify,
+  KeyObject,
+} from 'crypto';
 
-import { ml_dsa65 } from '@noble/post-quantum/ml-dsa';
 export interface Ed25519KeyPair {
   publicKey: Buffer;
   privateKey: Buffer;
-  publicKeyObject: Uint8Array;
-  privateKeyObject: Uint8Array;
+  publicKeyObject: KeyObject;
+  privateKeyObject: KeyObject;
 }
 
 /**
@@ -25,21 +30,21 @@ export interface Ed25519KeyPair {
  * while preserving the surrounding binding.
  */
 export function generateSigningKeyPair(): Ed25519KeyPair {
-  const { publicKey, secretKey } = ml_dsa65.keygen();
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   return {
-    publicKey: Buffer.from(publicKey) as Buffer,
-    privateKey: Buffer.from(secretKey) as Buffer,
+    publicKey: publicKey.export({ type: 'spki', format: 'der' }) as Buffer,
+    privateKey: privateKey.export({ type: 'pkcs8', format: 'der' }) as Buffer,
     publicKeyObject: publicKey,
-    privateKeyObject: secretKey,
+    privateKeyObject: privateKey,
   };
 }
 
 /** Sign a message with the classical Ed25519 private key. */
-export function signMessage(privateKey: Uint8Array, message: Buffer): Buffer {
-  return Buffer.from(ml_dsa65.sign(privateKey, message));
+export function signMessage(privateKey: KeyObject, message: Buffer): Buffer {
+  return nodeSign(null, message, privateKey);
 }
 
 /** Verify an Ed25519 signature. */
-export function verifyMessage(publicKey: Uint8Array, message: Buffer, signature: Buffer): boolean {
-  return ml_dsa65.verify(publicKey, message, signature);
+export function verifyMessage(publicKey: KeyObject, message: Buffer, signature: Buffer): boolean {
+  return nodeVerify(null, message, publicKey, signature);
 }
