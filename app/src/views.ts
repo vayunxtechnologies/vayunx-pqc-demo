@@ -5,7 +5,6 @@
  * standard, and a one-line risk story per asset, under a big headline banner.
  */
 
-import { Posture, PostureAsset } from './posture';
 import { User } from './users';
 
 const BRAND = 'VayunX';
@@ -164,9 +163,20 @@ export function layout(title: string, body: string): string {
   }
   .story b { color: #fff; }
 
+  .banner.welcome { background: linear-gradient(120deg, var(--indigo), var(--teal)); }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .tile { background: #fff; border-radius: 16px; padding: 22px 24px; box-shadow: 0 22px 55px rgba(2,8,23,0.42); }
+  .tile .t-num { font-size: 30px; font-weight: 800; color: var(--navy); }
+  .tile .t-label { color: #64748b; font-size: 13px; margin-top: 4px; }
+  .act { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 18px 22px; border-top: 1px solid #eef2f7; }
+  .act:first-of-type { border-top: none; }
+  .act .adetail { color:#475569; font-size: 13.5px; }
+  .act .when { font-size: 11.5px; color:#94a3b8; letter-spacing:.3px; }
+
   @media (max-width: 720px) {
     .asset { grid-template-columns: 1fr; }
     .pill { justify-self: start; }
+    .tiles { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -218,49 +228,38 @@ export function loginPage(error?: string): string {
   return layout('Sign In', body);
 }
 
-function assetRow(a: PostureAsset): string {
-  const pillLabel = a.status === 'safe' ? 'Safe' : 'Vulnerable';
-  return `<div class="asset">
-    <div class="aname">${esc(a.name)}
-      <span class="algo">${esc(a.algorithm)}</span>
-      <span class="astd">${esc(a.standard)}</span>
-    </div>
-    <div class="adetail">${esc(a.detail)}</div>
-    <span class="pill ${a.status}"><span class="dot"></span>${pillLabel}</span>
-  </div>`;
-}
-
-export function dashboardPage(user: User, posture: Posture): string {
-  const bannerClass = posture.pqcReady ? 'safe' : 'vuln';
-  const bannerSub = posture.pqcReady
-    ? 'All inspected cryptographic assets use NIST post-quantum standards.'
-    : 'One or more cryptographic assets are breakable by a quantum computer.';
-  const profileTag = `Profile: ${esc(posture.profile)}`;
-
-  const story = posture.pqcReady
-    ? `<b>This is the remediated state.</b> VayunX CryptoSPM scanned the application, opened an automated pull request, and migrated the flagged assets to post-quantum standards. Session signing now uses <b>ML-DSA-65 (FIPS 204)</b> and passwords are hashed with <b>SHA-256</b>. The posture is green.`
-    : `<b>VayunX CryptoSPM has flagged this application.</b> Its session tokens are signed with a classical elliptic-curve scheme and its passwords use a broken hash — both are visible above in red. In the next step, VayunX opens an automated pull request that migrates these to post-quantum standards, and this panel turns green.`;
-
+/**
+ * A plain, normal-looking dashboard — identical whether the app runs the classical or the PQC
+ * profile. The app never advertises its own crypto; VayunX CryptoSPM is what inspects and reports
+ * the posture externally. So a viewer can't tell "before" from "after" by looking at the app.
+ */
+export function dashboardPage(user: User): string {
   const body = `
     ${topbar(user)}
     <div class="wrap">
-      <div class="banner ${bannerClass}">
+      <div class="banner welcome">
         <div>
-          <p class="headline">${esc(posture.headline)}</p>
-          <p class="sub">${bannerSub}</p>
+          <p class="headline">Welcome to your dashboard</p>
+          <p class="sub">Signed in as ${esc(user.displayName)} — here's your account at a glance.</p>
         </div>
-        <span class="profile-tag">${profileTag}</span>
+        <span class="profile-tag">${BRAND} ${SUB_BRAND}</span>
+      </div>
+
+      <div class="tiles">
+        <div class="tile"><div class="t-num">12</div><div class="t-label">Documents</div></div>
+        <div class="tile"><div class="t-num">3</div><div class="t-label">Shared with you</div></div>
+        <div class="tile"><div class="t-num">98%</div><div class="t-label">Storage free</div></div>
       </div>
 
       <div class="panel">
-        <h2>Cryptographic Posture</h2>
-        <p class="desc">Live inspection of this application's cryptographic assets and their quantum readiness.</p>
-        ${posture.assets.map(assetRow).join('')}
+        <h2>Recent activity</h2>
+        <p class="desc">Your latest account activity.</p>
+        <div class="act"><div class="adetail">You signed in successfully.</div><span class="when">just now</span></div>
+        <div class="act"><div class="adetail">A new session was started for your account.</div><span class="when">just now</span></div>
+        <div class="act"><div class="adetail">Profile settings reviewed.</div><span class="when">earlier today</span></div>
       </div>
-
-      <div class="story">${story}</div>
     </div>
-    <div class="footer">Scanned by <strong>${BRAND} ${SUB_BRAND}</strong> · continuous cryptographic posture management</div>
+    <div class="footer">Powered by <strong>${BRAND} ${SUB_BRAND}</strong></div>
   `;
   return layout('Dashboard', body);
 }
