@@ -8,6 +8,7 @@
  * (FIPS 204). The keygen below is the pattern the AST codemod rewrites.
  */
 
+import { ml_dsa65 } from '@noble/post-quantum/ml-dsa';
 import {
   generateKeyPairSync,
   sign as nodeSign,
@@ -30,12 +31,12 @@ export interface Ed25519KeyPair {
  * while preserving the surrounding binding.
  */
 export function generateSigningKeyPair(): Ed25519KeyPair {
-  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+  const { publicKey, secretKey } = ml_dsa65.keygen();
   return {
     publicKey: publicKey.export({ type: 'spki', format: 'der' }) as Buffer,
-    privateKey: privateKey.export({ type: 'pkcs8', format: 'der' }) as Buffer,
+    privateKey: secretKey.export({ type: 'pkcs8', format: 'der' }) as Buffer,
     publicKeyObject: publicKey,
-    privateKeyObject: privateKey,
+    privateKeyObject: secretKey,
   };
 }
 
