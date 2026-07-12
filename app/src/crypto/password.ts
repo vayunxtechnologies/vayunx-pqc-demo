@@ -15,6 +15,7 @@ export const PASSWORD_HASH_ALGORITHM = 'SHA-1';
 
 /** Hash a password for storage. WEAK: unsalted SHA-1 — auto-patched to SHA-256. */
 export function hashPassword(password: string): string {
+  // VayunX remediation: Replace with SHA-256 (FIPS 180-4) for all integrity, authentication, and signature uses. For digital signature applications, SHA-256 or SHA3-256 is mandatory per SP 800-131A. SHA-1 is allowed only for legacy digital signature verification (not generation).
   return createHash('sha1').update(password).digest('hex');
 }
 
