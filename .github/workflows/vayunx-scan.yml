@@ -1,0 +1,48 @@
+name: Vayunx Crypto Scan
+on: [push, pull_request]
+
+jobs:
+  crypto-scan:
+    runs-on: ubuntu-latest
+    env:
+      VAYUNX_URL: ${{ secrets.VAYUNX_URL }}
+    steps:
+      - name: Trigger Crypto Scan
+        run: |
+          RESP=$(curl -s -X POST "$VAYUNX_URL/cicd/scan" \
+            -H "Authorization: Bearer ${{ secrets.VAYUNX_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"repository_id": "${{ github.repository }}"}')
+          echo "Connector: $(echo $RESP | jq -r '.connector_name')"
+          echo "JOB_ID=$(echo $RESP | jq -r '.job_id')" >> $GITHUB_ENV
+
+      - name: Poll for Results
+        run: |
+          while true; do
+            V=$(curl -s "$VAYUNX_URL/cicd/scan/$JOB_ID/verdict" \
+              -H "Authorization: Bearer ${{ secrets.VAYUNX_TOKEN }}")
+            STATUS=$(echo $V | jq -r '.status')
+            { [ "$STATUS" = "completed" ] || [ "$STATUS" = "failed" ]; } && break
+            echo "[$(echo $V | jq -r '.current_phase // "scanning"')] $(echo $V | jq -r '.progress_percentage // 0')%"
+            sleep 10
+          done
+          echo "SCAN_STATUS=$STATUS" >> $GITHUB_ENV
+          echo "CRITICAL=$(echo $V | jq '.findings_summary.critical // 0')" >> $GITHUB_ENV
+          echo "FINDINGS=$(echo $V | jq -c '.findings_summary // {}')" >> $GITHUB_ENV
+          echo "REPORT_URL=$(echo $V | jq -r '.report_url // ""')" >> $GITHUB_ENV
+          echo "ERROR_MSG=$(echo $V | jq -r '.error_message // ""')" >> $GITHUB_ENV
+
+      - name: Evaluate Findings
+        run: |
+          VAYUNX_HOST="${VAYUNX_URL%/api/v1}"
+          if [ "$SCAN_STATUS" = "failed" ]; then
+            echo "::error::Scan failed — $ERROR_MSG"
+            exit 1
+          fi
+          echo "Findings: $FINDINGS"
+          [ -n "$REPORT_URL" ] && echo "::notice::Full report: ${VAYUNX_HOST}${REPORT_URL}"
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::error::Critical crypto issues found. See: ${VAYUNX_HOST}${REPORT_URL}"
+            exit 1
+          fi
+          echo "::notice::Scan passed — no critical findings."
