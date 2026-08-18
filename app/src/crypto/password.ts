@@ -1,24 +1,28 @@
 /*
  * Password storage for the demo login service.
  *
- * NOTE (VayunX demo): passwords are stored as UNSALTED SHA-1 digests — a weak, broken hash
- * (practical collisions since 2017; GPU brute-force trivial). The VayunX scanner flags this
- * and the deterministic auto-patcher performs a MECHANICAL swap SHA-1 -> SHA-256 (a genuine
- * drop-in code fix). This is the "classical algorithm used to store passwords" the demo shows
- * turning from red to green.
+ * Migrated from unsalted SHA-1 to Argon2id (RFC 9106) - the OWASP-recommended, memory-hard
+ * password KDF. Argon2id salts every password automatically and resists GPU brute-force, unlike
+ * a plain hash (SHA-1 or even SHA-256). NOTE: the argon2 API is async, so hashPassword /
+ * verifyPassword are now async - every caller must await. The stored-hash FORMAT changed, so
+ * existing SHA-1 digests will not verify; re-hash users on next successful login (or migrate).
  */
 
-import { createHash } from 'crypto';
+import argon2 from 'argon2';
 
-/** The hash currently protecting stored passwords — surfaced in the posture panel. */
-export const PASSWORD_HASH_ALGORITHM = 'SHA-1';
+/** The KDF now protecting stored passwords - surfaced in the posture panel. */
+export const PASSWORD_HASH_ALGORITHM = 'Argon2id';
 
-/** Hash a password for storage. WEAK: unsalted SHA-1 — auto-patched to SHA-256. */
-export function hashPassword(password: string): string {
-  return createHash('sha1').update(password).digest('hex');
+/** Hash a password for storage using Argon2id (salted + memory-hard). */
+export async function hashPassword(password: string): Promise<string> {
+  return argon2.hash(password, { type: argon2.argon2id });
 }
 
-/** Constant-ish comparison of a candidate password against a stored hash. */
-export function verifyPassword(password: string, storedHash: string): boolean {
-  return hashPassword(password) === storedHash;
+/** Verify a candidate password against a stored Argon2id hash (salt-aware, constant-time). */
+export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  try {
+    return await argon2.verify(storedHash, password);
+  } catch {
+    return false;
+  }
 }
